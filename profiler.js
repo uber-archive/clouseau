@@ -1,4 +1,4 @@
-var microtime = require('microtime');
+// microtime no longer needed with process.hrtime()
 
 Profiler = {
     tree: {
@@ -12,23 +12,51 @@ Profiler = {
     displayInterval: 30000, // 30 seconds
     minPercent: 0,
     enabled: false,
+    useMicrotime: true,
 
+    // hrtime implementation - nanosecond resolution
+    // requries node v0.8 or above
+    getTickHR: function() {
+        var t = process.hrtime();
+        return t[0] + t[1] / 1000000000.0;
+    },
+
+    // microtime implementation.
+    getTick:function() {
+        return this.microtime.nowDouble();
+    },
     init: function(options) {
+
+        // which timer to use?
+        if (options.useMicrotime !== undefined) {
+            this.useMicrotime = options.useMicrotime;
+        }
+        if (this.useMicrotime) {
+            this.microtime = require('microtime');
+        } else {
+            this.getTick = this.getTickHR;
+        }
+
         if (this.enabled) {
             if (options) {
                 if (options.displayInterval >= 1000) {
                     this.displayInterval = options.displayInterval;
+                } else if (options.displayInterval == 0) {
+                    // zero interval implies no recurrance.
+                    this.displayInterval = 0;
                 }
                 if (options.minPercent >= 0 && options.minPercent < 100) {
                     this.minPercent = options.minPercent;
                 }
             }
-    
+
             this.scope = this.tree;
-    
+
             this.assignClassNames();
-    
-            setTimeout(this.display.bind(this), this.displayInterval);
+
+            if (this.displayInterval > 0) {
+                setTimeout(this.display.bind(this), this.displayInterval);
+            }
             this.initialized = true;
         }
     },
@@ -45,13 +73,13 @@ Profiler = {
                 children: {},
                 parent: this.scope
             });
-            
-        node.started = microtime.nowDouble();
+
+        node.started = this.getTick();
         this.scope = node;
     },
     exit: function() {
         var node = this.scope;
-        var elapsed = microtime.nowDouble() - node.started;
+        var elapsed = this.getTick() - node.started;
 
         node.elapsed += elapsed;
         node.count++;
@@ -66,7 +94,7 @@ Profiler = {
         total.count++;
 
         this.scope = node.parent;
-        
+
         if (this.scope == undefined) {
             console.log(this.scope.started);
         }
@@ -181,16 +209,24 @@ Profiler = {
         }
 
         console.log('');
+        if (this.displayInterval > 0) {
+            setTimeout(this.display.bind(this), this.displayInterval);
+        }
 
-        setTimeout(this.display.bind(this), this.displayInterval);
     }
 };
 
 /*
 USAGE:
 var X = {
+
+    callSomeAsync(param1, param2, __f(function() {
+        // callback code
+    }));
+
+
     doSomething: function(x) {
-        __f("X.onDoSomethingComplete", function() {
+        __f(function() {
             return 5 * x;
         });
 
@@ -198,8 +234,17 @@ var X = {
     }
 }
 */
-function __profile(name, f) {
+__f = function(fn) {
     if (Profiler.enabled) {
+
+        var err;
+        try { throw Error('') } catch(e) { err = e; }
+
+        var callerLine = err.stack.split("\n")[3];
+        var index1 = callerLine.lastIndexOf("/");
+        var index2 = callerLine.lastIndexOf(":");
+        var name = "anonymous " +  callerLine.substr(index1 + 1, index2 - index1 - 1);
+
         return function() {
             try {
                 Profiler.enter(name);
@@ -216,6 +261,6 @@ function __profile(name, f) {
             return ret;
         }
     } else {
-        return f;
+        return fn;
     }
 }
