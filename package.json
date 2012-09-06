@@ -21,5 +21,6 @@
 	"scripts": {
 		"prepublish": "npm test && docco ./lib/profiler.js && git commit -am \"Automatic doc and minification for version $npm_package_version\" && git tag $npm_package_version && git push && git push --tags",
 		"test": "node ./test/profiler_test.js"
-	}
+	},
+	"private": true
 }
