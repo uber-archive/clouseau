@@ -1,4 +1,4 @@
-require("./profiler");
+require("../lib/profiler");
 
 Profiler.enabled = true;
 Profiler.init({displayInterval: 0, useMicrotime: true});
