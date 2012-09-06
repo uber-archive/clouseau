@@ -3,7 +3,7 @@
 	"description": "A Node.js performance profiler by Uber",
 	"homepage": "https://github.com/uber/profiler",
 	"author": "Jason Roberts <jason@uber.com>",
-	"contributors: [
+	"contributors": [
 		"Conrad Whelan <conrad@uber.com>",
 		"David Ellis <ellis@uber.com>"
 	],
@@ -20,7 +20,7 @@
 	},
 	"scripts": {
 		"prepublish": "npm test && docco ./lib/profiler.js && git commit -am \"Automatic doc and minification for version $npm_package_version\" && git tag $npm_package_version && git push && git push --tags",
-		"test": "node ./test/profiler_test.js"
+		"test": "node ./test/profiler_test.js 10"
 	},
 	"private": true
 }

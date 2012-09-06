@@ -1,4 +1,4 @@
-require("../lib/profiler");
+var Profiler = require("../lib/profiler");
 
 Profiler.enabled = true;
 Profiler.init({displayInterval: 0, useMicrotime: true});
@@ -27,5 +27,5 @@ console.log(n);
 __f(fib(n, __f(function(f){
     console.log('fib(' + n + ') = ' + f);
 
-    Profiler.display();
+    console.log(Profiler.getFormattedData());
 })));
