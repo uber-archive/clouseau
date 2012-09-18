@@ -7,7 +7,7 @@
 		"Conrad Whelan <conrad@uber.com>",
 		"David Ellis <ellis@uber.com>"
 	],
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"main": "./lib/profiler",
 	"dependencies": {
 		"spruce": "1.0.2"
