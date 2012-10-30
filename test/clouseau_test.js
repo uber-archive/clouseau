@@ -1,4 +1,4 @@
-var Profiler = require("../lib/profiler");
+var Profiler = require("../lib/clouseau");
 
 Profiler.enabled = true;
 Profiler.init({displayInterval: 0, useMicrotime: true});
