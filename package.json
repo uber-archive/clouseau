@@ -4,8 +4,8 @@
 	"homepage": "https://github.com/uber/clouseau",
 	"author": "Jason Roberts <jasonr11@gmail.com>",
 	"contributors": [
-        "Guyon Roche <guyon.roche@gmail.com>",
-		"Conrad Whelan <conrad@uber.com>",
+		"Guyon Roche <guyon.roche@gmail.com>",
+		"Conrad Whelan <conrad.whelan@gmail.com>",
 		"David Ellis <d.f.ellis@ieee.org>"
 	],
 	"version": "0.1.2",
@@ -21,7 +21,6 @@
 	},
 	"scripts": {
 		"prepublish": "npm test && docco ./lib/clouseau.js && git commit -am \"Automatic doc and minification for version $npm_package_version\" && git tag $npm_package_version && git push && git push --tags",
-		"test": "node ./test/profiler_test.js 10"
-	},
-	"private": true
+		"test": "node ./test/clouseau_test.js 10"
+	}
 }

@@ -1,20 +1,34 @@
-# Profiler (js-profiler, node-profiler [taken], uber-profiler?)
+# Clouseau
 
 A simple profiling object useful for determining source code performance in Javascript and Node.js
 
 ## Install
 
-    npm install <something> # Eventually
-
-For now...
-
-    mkdir node_modules # If it doesn't already exist
-    git clone git@github.com:uber/profiler
+    npm install clouseau
 
 ## Usage
 
 TODO: Significant work on the usage section needed, especially need help explaining the anonymous function wrapper.
 
-## License
+## License (MIT)
 
-PROPRIETARY TO UBER!!! (Will need to decide on a license in the future when open sourcing it)
+Copyright (C) 2012 by Uber Technologies, Inc.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
