@@ -1,0 +1,252 @@
+<!DOCTYPE html>  <html> <head>   <title>clouseau.js</title>   <meta http-equiv="content-type" content="text/html; charset=UTF-8">   <link rel="stylesheet" media="all" href="docco.css" /> </head> <body>   <div id="container">     <div id="background"></div>          <table cellpadding="0" cellspacing="0">       <thead>         <tr>           <th class="docs">             <h1>               clouseau.js             </h1>           </th>           <th class="code">           </th>         </tr>       </thead>       <tbody>                               <tr id="section-1">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-1">&#182;</a>               </div>                            </td>             <td class="code">               <div class="highlight"><pre><span class="kd">var</span> <span class="nx">logger</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s1">&#39;spruce&#39;</span><span class="p">).</span><span class="nx">init</span><span class="p">();</span>
+<span class="kd">var</span> <span class="nx">fs</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s1">&#39;fs&#39;</span><span class="p">);</span>
+
+<span class="kd">var</span> <span class="nx">Profiler</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="nx">tree</span><span class="o">:</span> <span class="p">{</span>
+        <span class="nx">name</span><span class="o">:</span> <span class="s2">&quot;main&quot;</span><span class="p">,</span>
+        <span class="nx">count</span><span class="o">:</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="nx">elapsed</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="nx">children</span><span class="o">:</span> <span class="p">{}</span>
+    <span class="p">},</span>
+    <span class="nx">scope</span><span class="o">:</span> <span class="kc">null</span><span class="p">,</span>
+    <span class="nx">totals</span><span class="o">:</span> <span class="p">{},</span>
+    <span class="nx">minPercent</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="nx">enabled</span><span class="o">:</span> <span class="kc">false</span><span class="p">,</span>
+
+    <span class="nx">getTick</span><span class="o">:</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+        <span class="kd">var</span> <span class="nx">t</span> <span class="o">=</span> <span class="nx">process</span><span class="p">.</span><span class="nx">hrtime</span><span class="p">();</span>
+        <span class="k">return</span> <span class="nx">t</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="nx">t</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">/</span> <span class="mf">1000000000.0</span><span class="p">;</span>
+    <span class="p">},</span>
+    <span class="nx">init</span><span class="o">:</span> <span class="kd">function</span><span class="p">(</span><span class="nx">options</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">enabled</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">if</span> <span class="p">(</span><span class="nx">options</span><span class="p">)</span> <span class="p">{</span>
+                <span class="k">if</span> <span class="p">(</span><span class="nx">options</span><span class="p">.</span><span class="nx">minPercent</span> <span class="o">&gt;=</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="nx">options</span><span class="p">.</span><span class="nx">minPercent</span> <span class="o">&lt;</span> <span class="mi">100</span><span class="p">)</span> <span class="p">{</span>
+                    <span class="k">this</span><span class="p">.</span><span class="nx">minPercent</span> <span class="o">=</span> <span class="nx">options</span><span class="p">.</span><span class="nx">minPercent</span><span class="p">;</span>
+                <span class="p">}</span>
+            <span class="p">}</span>
+
+            <span class="k">this</span><span class="p">.</span><span class="nx">scope</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">tree</span><span class="p">;</span>
+
+            <span class="k">this</span><span class="p">.</span><span class="nx">assignClassNames</span><span class="p">();</span>
+
+            <span class="k">this</span><span class="p">.</span><span class="nx">initialized</span> <span class="o">=</span> <span class="kc">true</span><span class="p">;</span>
+        <span class="p">}</span>
+    <span class="p">},</span>
+    <span class="nx">enter</span><span class="o">:</span> <span class="kd">function</span><span class="p">(</span><span class="nx">name</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="k">this</span><span class="p">.</span><span class="nx">initialized</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">this</span><span class="p">.</span><span class="nx">init</span><span class="p">();</span>
+        <span class="p">}</span>
+
+        <span class="kd">var</span> <span class="nx">node</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">scope</span><span class="p">.</span><span class="nx">children</span><span class="p">[</span><span class="nx">name</span><span class="p">]</span> <span class="o">?</span> <span class="k">this</span><span class="p">.</span><span class="nx">scope</span><span class="p">.</span><span class="nx">children</span><span class="p">[</span><span class="nx">name</span><span class="p">]</span> <span class="o">:</span>
+            <span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">scope</span><span class="p">.</span><span class="nx">children</span><span class="p">[</span><span class="nx">name</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="nx">name</span><span class="o">:</span> <span class="nx">name</span><span class="p">,</span>
+                <span class="nx">count</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+                <span class="nx">elapsed</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+                <span class="nx">children</span><span class="o">:</span> <span class="p">{},</span>
+                <span class="nx">chidrenElapsed</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+                <span class="nx">parent</span><span class="o">:</span> <span class="k">this</span><span class="p">.</span><span class="nx">scope</span>
+            <span class="p">});</span>
+
+        <span class="nx">node</span><span class="p">.</span><span class="nx">started</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">getTick</span><span class="p">();</span>
+        <span class="nx">node</span><span class="p">.</span><span class="nx">childrenElapsed</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">scope</span> <span class="o">=</span> <span class="nx">node</span><span class="p">;</span>
+    <span class="p">},</span>
+    <span class="nx">exit</span><span class="o">:</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+        <span class="kd">var</span> <span class="nx">node</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">scope</span><span class="p">;</span>
+        <span class="kd">var</span> <span class="nx">elapsed</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">getTick</span><span class="p">()</span> <span class="o">-</span> <span class="nx">node</span><span class="p">.</span><span class="nx">started</span><span class="p">;</span>
+
+        <span class="nx">node</span><span class="p">.</span><span class="nx">elapsed</span> <span class="o">+=</span> <span class="nx">elapsed</span><span class="p">;</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nx">node</span><span class="p">.</span><span class="nx">parent</span><span class="p">)</span> <span class="p">{</span>
+            <span class="nx">node</span><span class="p">.</span><span class="nx">parent</span><span class="p">.</span><span class="nx">childrenElapsed</span> <span class="o">+=</span> <span class="nx">elapsed</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="nx">node</span><span class="p">.</span><span class="nx">count</span><span class="o">++</span><span class="p">;</span>
+
+        <span class="kd">var</span> <span class="nx">total</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">totals</span><span class="p">[</span><span class="nx">node</span><span class="p">.</span><span class="nx">name</span><span class="p">]</span> <span class="o">?</span> <span class="k">this</span><span class="p">.</span><span class="nx">totals</span><span class="p">[</span><span class="nx">node</span><span class="p">.</span><span class="nx">name</span><span class="p">]</span> <span class="o">:</span>
+            <span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">totals</span><span class="p">[</span><span class="nx">node</span><span class="p">.</span><span class="nx">name</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="nx">name</span><span class="o">:</span> <span class="nx">node</span><span class="p">.</span><span class="nx">name</span><span class="p">,</span>
+                <span class="nx">elapsed</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+                <span class="nx">localElapsed</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+                <span class="nx">count</span><span class="o">:</span><span class="mi">0</span>
+            <span class="p">});</span>
+        <span class="nx">total</span><span class="p">.</span><span class="nx">elapsed</span> <span class="o">+=</span> <span class="nx">elapsed</span><span class="p">;</span>
+    <span class="nx">total</span><span class="p">.</span><span class="nx">localElapsed</span> <span class="o">+=</span> <span class="p">(</span><span class="nx">elapsed</span> <span class="o">&gt;</span> <span class="nx">node</span><span class="p">.</span><span class="nx">childrenElapsed</span><span class="p">)</span> <span class="o">?</span> <span class="p">(</span><span class="nx">elapsed</span> <span class="o">-</span> <span class="nx">node</span><span class="p">.</span><span class="nx">childrenElapsed</span><span class="p">)</span> <span class="o">:</span> <span class="mi">0</span><span class="p">;</span>
+        <span class="nx">total</span><span class="p">.</span><span class="nx">count</span><span class="o">++</span><span class="p">;</span>
+
+        <span class="k">this</span><span class="p">.</span><span class="nx">scope</span> <span class="o">=</span> <span class="nx">node</span><span class="p">.</span><span class="nx">parent</span><span class="p">;</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">scope</span> <span class="o">==</span> <span class="kc">undefined</span><span class="p">)</span> <span class="p">{</span>
+            <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">scope</span><span class="p">.</span><span class="nx">started</span><span class="p">);</span>
+        <span class="p">}</span>
+    <span class="p">},</span>
+    <span class="nx">getFormattedData</span><span class="o">:</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+        <span class="kd">var</span> <span class="nx">lines</span> <span class="o">=</span> <span class="p">[];</span></pre></div>             </td>           </tr>                               <tr id="section-2">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-2">&#182;</a>               </div>               <p>Calculate total elapsed</p>             </td>             <td class="code">               <div class="highlight"><pre>        <span class="k">this</span><span class="p">.</span><span class="nx">tree</span><span class="p">.</span><span class="nx">elapsed</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+        <span class="k">for</span> <span class="p">(</span><span class="kd">var</span> <span class="nx">i</span> <span class="k">in</span> <span class="k">this</span><span class="p">.</span><span class="nx">tree</span><span class="p">.</span><span class="nx">children</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">this</span><span class="p">.</span><span class="nx">tree</span><span class="p">.</span><span class="nx">elapsed</span> <span class="o">+=</span> <span class="k">this</span><span class="p">.</span><span class="nx">tree</span><span class="p">.</span><span class="nx">children</span><span class="p">[</span><span class="nx">i</span><span class="p">].</span><span class="nx">elapsed</span><span class="p">;</span>
+        <span class="p">}</span></pre></div>             </td>           </tr>                               <tr id="section-3">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-3">&#182;</a>               </div>               <p>Tree View</p>             </td>             <td class="code">               <div class="highlight"><pre>        <span class="k">this</span><span class="p">.</span><span class="nx">getFormatNodeData</span><span class="p">(</span><span class="nx">lines</span><span class="p">,</span> <span class="k">this</span><span class="p">.</span><span class="nx">tree</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="k">this</span><span class="p">.</span><span class="nx">tree</span><span class="p">.</span><span class="nx">elapsed</span><span class="p">);</span>
+
+        <span class="nx">lines</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="s1">&#39;--------------------------------------------------------------------&#39;</span><span class="p">);</span></pre></div>             </td>           </tr>                               <tr id="section-4">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-4">&#182;</a>               </div>               <p>Totals View</p>             </td>             <td class="code">               <div class="highlight"><pre>        <span class="kd">var</span> <span class="nx">totalsArr</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">sortLocal</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">totals</span><span class="p">);</span>
+        <span class="k">for</span><span class="p">(</span><span class="kd">var</span> <span class="nx">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="o">&lt;</span> <span class="nx">totalsArr</span><span class="p">.</span><span class="nx">length</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+            <span class="kd">var</span> <span class="nx">total</span> <span class="o">=</span> <span class="nx">totalsArr</span><span class="p">[</span><span class="nx">i</span><span class="p">];</span>
+            <span class="kd">var</span> <span class="nx">percent</span> <span class="o">=</span> <span class="mi">100</span> <span class="o">*</span> <span class="nx">total</span><span class="p">.</span><span class="nx">localElapsed</span> <span class="o">/</span> <span class="k">this</span><span class="p">.</span><span class="nx">tree</span><span class="p">.</span><span class="nx">elapsed</span><span class="p">;</span>
+
+            <span class="k">if</span> <span class="p">(</span><span class="nx">percent</span> <span class="o">&gt;=</span> <span class="k">this</span><span class="p">.</span><span class="nx">minPercent</span><span class="p">)</span> <span class="p">{</span>
+                <span class="nx">lines</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="nx">percent</span><span class="p">.</span><span class="nx">toFixed</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;%: &#39;</span> <span class="o">+</span> <span class="nx">total</span><span class="p">.</span><span class="nx">name</span> <span class="o">+</span> <span class="s1">&#39; (&#39;</span> <span class="o">+</span> <span class="nx">total</span><span class="p">.</span><span class="nx">count</span> <span class="o">+</span>
+                        <span class="s1">&#39;, &#39;</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">formatElapsedTime</span><span class="p">(</span><span class="nx">total</span><span class="p">.</span><span class="nx">localElapsed</span> <span class="o">/</span> <span class="nx">total</span><span class="p">.</span><span class="nx">count</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;)&#39;</span><span class="p">);</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+
+        <span class="nx">lines</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">);</span>
+
+        <span class="k">return</span> <span class="nx">lines</span><span class="p">.</span><span class="nx">join</span><span class="p">(</span><span class="s2">&quot;\n&quot;</span><span class="p">);</span>
+    <span class="p">},</span>
+    <span class="nx">getFormatNodeData</span><span class="o">:</span> <span class="kd">function</span><span class="p">(</span><span class="nx">lines</span><span class="p">,</span> <span class="nx">node</span><span class="p">,</span> <span class="nx">indent</span><span class="p">,</span> <span class="nx">total</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kd">var</span> <span class="nx">percent</span> <span class="o">=</span> <span class="mi">100</span> <span class="o">*</span> <span class="nx">node</span><span class="p">.</span><span class="nx">elapsed</span> <span class="o">/</span> <span class="nx">total</span><span class="p">;</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="nx">percent</span> <span class="o">&gt;=</span> <span class="k">this</span><span class="p">.</span><span class="nx">minPercent</span><span class="p">)</span> <span class="p">{</span></pre></div>             </td>           </tr>                               <tr id="section-5">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-5">&#182;</a>               </div>               <p>Calculate local time: my elapsed less children's elapsed</p>             </td>             <td class="code">               <div class="highlight"><pre>            <span class="kd">var</span> <span class="nx">local</span> <span class="o">=</span> <span class="nx">node</span><span class="p">.</span><span class="nx">elapsed</span><span class="p">;</span>
+            <span class="kd">var</span> <span class="nx">childrenArr</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">sort</span><span class="p">(</span><span class="nx">node</span><span class="p">.</span><span class="nx">children</span><span class="p">);</span>
+            <span class="k">for</span> <span class="p">(</span><span class="kd">var</span> <span class="nx">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="o">&lt;</span> <span class="nx">childrenArr</span><span class="p">.</span><span class="nx">length</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+                <span class="nx">local</span> <span class="o">=</span> <span class="nx">local</span> <span class="o">-</span> <span class="nx">childrenArr</span><span class="p">[</span><span class="nx">i</span><span class="p">].</span><span class="nx">elapsed</span><span class="p">;</span>
+            <span class="p">}</span>
+
+            <span class="nx">lines</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="nx">indent</span> <span class="o">+</span> <span class="nx">percent</span><span class="p">.</span><span class="nx">toFixed</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;%: &#39;</span> <span class="o">+</span>
+                    <span class="nx">node</span><span class="p">.</span><span class="nx">name</span> <span class="o">+</span>
+                    <span class="s1">&#39; (&#39;</span> <span class="o">+</span> <span class="nx">node</span><span class="p">.</span><span class="nx">count</span> <span class="o">+</span>
+                    <span class="s1">&#39;, &#39;</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">formatElapsedTime</span><span class="p">(</span><span class="nx">node</span><span class="p">.</span><span class="nx">elapsed</span> <span class="o">/</span> <span class="nx">node</span><span class="p">.</span><span class="nx">count</span><span class="p">)</span> <span class="o">+</span>
+                    <span class="s1">&#39;, &#39;</span> <span class="o">+</span> <span class="k">this</span><span class="p">.</span><span class="nx">formatElapsedTime</span><span class="p">(</span><span class="nx">local</span> <span class="o">/</span> <span class="nx">node</span><span class="p">.</span><span class="nx">count</span><span class="p">)</span> <span class="o">+</span>
+                    <span class="s1">&#39;)&#39;</span><span class="p">);</span>
+
+            <span class="k">for</span> <span class="p">(</span><span class="kd">var</span> <span class="nx">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="o">&lt;</span> <span class="nx">childrenArr</span><span class="p">.</span><span class="nx">length</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+                <span class="k">this</span><span class="p">.</span><span class="nx">getFormatNodeData</span><span class="p">(</span><span class="nx">lines</span><span class="p">,</span> <span class="nx">childrenArr</span><span class="p">[</span><span class="nx">i</span><span class="p">],</span> <span class="nx">indent</span> <span class="o">+</span> <span class="s2">&quot;  &quot;</span><span class="p">,</span> <span class="nx">node</span><span class="p">.</span><span class="nx">elapsed</span><span class="p">);</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">},</span>
+    <span class="nx">formatElapsedTime</span><span class="o">:</span> <span class="kd">function</span><span class="p">(</span><span class="nx">t</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nx">t</span> <span class="o">&lt;</span> <span class="mf">0.000001</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">return</span> <span class="p">(</span><span class="nx">t</span><span class="o">*</span><span class="mi">1000000000</span><span class="p">).</span><span class="nx">toFixed</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;ns&#39;</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nx">t</span> <span class="o">&lt;</span> <span class="mf">0.001</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">return</span> <span class="p">(</span><span class="nx">t</span><span class="o">*</span><span class="mi">1000000</span><span class="p">).</span><span class="nx">toFixed</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;mcs&#39;</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nx">t</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">return</span> <span class="p">(</span><span class="nx">t</span><span class="o">*</span><span class="mi">1000</span><span class="p">).</span><span class="nx">toFixed</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;ms&#39;</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nx">t</span> <span class="o">&lt;</span> <span class="mi">60</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">return</span> <span class="p">(</span><span class="nx">t</span><span class="p">).</span><span class="nx">toFixed</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;s&#39;</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nx">t</span> <span class="o">&lt;</span> <span class="mi">3600</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">return</span> <span class="p">(</span><span class="nx">t</span><span class="o">/</span><span class="mi">60</span><span class="p">).</span><span class="nx">toFixed</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;min&#39;</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="k">return</span> <span class="p">(</span><span class="nx">t</span><span class="o">/</span><span class="mi">3600</span><span class="p">).</span><span class="nx">toFixed</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;hr&#39;</span><span class="p">;</span>
+    <span class="p">},</span>
+    <span class="nx">sortAvg</span><span class="o">:</span> <span class="kd">function</span><span class="p">(</span><span class="nx">o</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kd">var</span> <span class="nx">a</span> <span class="o">=</span> <span class="p">[];</span>
+        <span class="k">for</span><span class="p">(</span><span class="kd">var</span> <span class="nx">i</span> <span class="k">in</span> <span class="nx">o</span><span class="p">)</span> <span class="p">{</span>
+            <span class="kd">var</span> <span class="nx">total</span> <span class="o">=</span> <span class="nx">o</span><span class="p">[</span><span class="nx">i</span><span class="p">];</span>
+            <span class="k">if</span> <span class="p">(</span><span class="nx">total</span><span class="p">.</span><span class="nx">count</span><span class="p">)</span> <span class="p">{</span>
+                <span class="nx">a</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="nx">total</span><span class="p">);</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+        <span class="nx">a</span><span class="p">.</span><span class="nx">sort</span><span class="p">(</span><span class="kd">function</span><span class="p">(</span><span class="nx">t1</span><span class="p">,</span> <span class="nx">t2</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">return</span> <span class="p">(</span><span class="nx">t2</span><span class="p">.</span><span class="nx">elapsed</span> <span class="o">/</span><span class="nx">t2</span><span class="p">.</span><span class="nx">count</span> <span class="o">-</span> <span class="nx">t1</span><span class="p">.</span><span class="nx">elapsed</span> <span class="o">/</span><span class="nx">t1</span><span class="p">.</span><span class="nx">count</span><span class="p">);</span>
+        <span class="p">});</span>
+        <span class="k">return</span> <span class="nx">a</span><span class="p">;</span>
+
+    <span class="p">},</span>
+    <span class="nx">sort</span><span class="o">:</span> <span class="kd">function</span><span class="p">(</span><span class="nx">o</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kd">var</span> <span class="nx">a</span> <span class="o">=</span> <span class="p">[];</span>
+        <span class="k">for</span><span class="p">(</span><span class="kd">var</span> <span class="nx">i</span> <span class="k">in</span> <span class="nx">o</span><span class="p">)</span> <span class="p">{</span>
+            <span class="kd">var</span> <span class="nx">total</span> <span class="o">=</span> <span class="nx">o</span><span class="p">[</span><span class="nx">i</span><span class="p">];</span>
+            <span class="k">if</span> <span class="p">(</span><span class="nx">total</span><span class="p">.</span><span class="nx">count</span><span class="p">)</span> <span class="p">{</span>
+                <span class="nx">a</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="nx">total</span><span class="p">);</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+        <span class="nx">a</span><span class="p">.</span><span class="nx">sort</span><span class="p">(</span><span class="kd">function</span><span class="p">(</span><span class="nx">t1</span><span class="p">,</span> <span class="nx">t2</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">return</span> <span class="p">(</span><span class="nx">t2</span><span class="p">.</span><span class="nx">elapsed</span> <span class="o">-</span> <span class="nx">t1</span><span class="p">.</span><span class="nx">elapsed</span><span class="p">);</span>
+        <span class="p">});</span>
+        <span class="k">return</span> <span class="nx">a</span><span class="p">;</span>
+
+    <span class="p">},</span>
+    <span class="nx">sortLocal</span><span class="o">:</span> <span class="kd">function</span><span class="p">(</span><span class="nx">o</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kd">var</span> <span class="nx">a</span> <span class="o">=</span> <span class="p">[];</span>
+        <span class="k">for</span><span class="p">(</span><span class="kd">var</span> <span class="nx">i</span> <span class="k">in</span> <span class="nx">o</span><span class="p">)</span> <span class="p">{</span>
+            <span class="kd">var</span> <span class="nx">total</span> <span class="o">=</span> <span class="nx">o</span><span class="p">[</span><span class="nx">i</span><span class="p">];</span>
+            <span class="k">if</span> <span class="p">(</span><span class="nx">total</span><span class="p">.</span><span class="nx">count</span><span class="p">)</span> <span class="p">{</span>
+                <span class="nx">a</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="nx">total</span><span class="p">);</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+        <span class="nx">a</span><span class="p">.</span><span class="nx">sort</span><span class="p">(</span><span class="kd">function</span><span class="p">(</span><span class="nx">t1</span><span class="p">,</span> <span class="nx">t2</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">return</span> <span class="p">(</span><span class="nx">t2</span><span class="p">.</span><span class="nx">localElapsed</span> <span class="o">-</span> <span class="nx">t1</span><span class="p">.</span><span class="nx">localElapsed</span><span class="p">);</span>
+        <span class="p">});</span>
+        <span class="k">return</span> <span class="nx">a</span><span class="p">;</span>
+
+    <span class="p">},</span>
+    <span class="nx">assignClassNames</span><span class="o">:</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+        <span class="kd">var</span> <span class="nx">g</span> <span class="o">=</span> <span class="nx">global</span><span class="p">;</span>
+
+        <span class="k">for</span><span class="p">(</span><span class="kd">var</span> <span class="nx">name</span> <span class="k">in</span> <span class="nx">g</span><span class="p">)</span> <span class="p">{</span>
+            <span class="kd">var</span> <span class="nx">thing</span> <span class="o">=</span> <span class="nx">g</span><span class="p">[</span><span class="nx">name</span><span class="p">];</span>
+            <span class="k">if</span> <span class="p">((</span><span class="k">typeof</span> <span class="nx">thing</span> <span class="o">==</span> <span class="s2">&quot;function&quot;</span><span class="p">)</span> <span class="o">&amp;&amp;</span> <span class="nx">thing</span><span class="p">.</span><span class="nx">prototype</span> <span class="o">&amp;&amp;</span> <span class="p">(</span><span class="nx">thing</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">ClassName</span> <span class="o">==</span> <span class="s2">&quot;anonymous&quot;</span><span class="p">))</span> <span class="p">{</span>
+                <span class="nx">thing</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">ClassName</span> <span class="o">=</span> <span class="nx">name</span><span class="p">;</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">};</span>
+
+<span class="kd">var</span> <span class="nx">fnLocHash</span> <span class="o">=</span> <span class="p">{};</span>
+
+<span class="kd">function</span> <span class="nx">__f</span><span class="p">(</span><span class="nx">fn</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="nx">Profiler</span><span class="p">.</span><span class="nx">enabled</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kd">var</span> <span class="nx">key</span> <span class="o">=</span> <span class="nx">__f</span><span class="p">.</span><span class="nx">caller</span><span class="p">.</span><span class="nx">toString</span><span class="p">().</span><span class="nx">length</span> <span class="o">+</span> <span class="s2">&quot;,&quot;</span> <span class="o">+</span> <span class="nx">fn</span><span class="p">.</span><span class="nx">toString</span><span class="p">.</span><span class="nx">length</span><span class="p">;</span>
+        <span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="nx">fnLocHash</span><span class="p">[</span><span class="nx">key</span><span class="p">])</span> <span class="p">{</span>
+            <span class="kd">var</span> <span class="nx">err</span> <span class="o">=</span> <span class="k">new</span> <span class="nb">Error</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">);</span>
+            <span class="kd">var</span> <span class="nx">callerLine</span> <span class="o">=</span> <span class="nx">err</span><span class="p">.</span><span class="nx">stack</span><span class="p">.</span><span class="nx">split</span><span class="p">(</span><span class="s2">&quot;\n&quot;</span><span class="p">)[</span><span class="mi">2</span><span class="p">];</span>
+            <span class="kd">var</span> <span class="nx">index1</span> <span class="o">=</span> <span class="nx">callerLine</span><span class="p">.</span><span class="nx">lastIndexOf</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">);</span>
+            <span class="kd">var</span> <span class="nx">index2</span> <span class="o">=</span> <span class="nx">callerLine</span><span class="p">.</span><span class="nx">lastIndexOf</span><span class="p">(</span><span class="s2">&quot;:&quot;</span><span class="p">);</span>
+            <span class="nx">fnLocHash</span><span class="p">[</span><span class="nx">key</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="nx">__f</span><span class="p">.</span><span class="nx">caller</span><span class="p">.</span><span class="nx">name</span> <span class="o">||</span> <span class="s2">&quot;anonymous &quot;</span><span class="p">)</span> <span class="o">+</span> <span class="nx">callerLine</span><span class="p">.</span><span class="nx">substr</span><span class="p">(</span><span class="nx">index1</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="nx">index2</span> <span class="o">-</span> <span class="nx">index1</span> <span class="o">-</span> <span class="mi">1</span><span class="p">);</span>
+        <span class="p">}</span>
+        <span class="kd">var</span> <span class="nx">name</span> <span class="o">=</span> <span class="nx">fnLocHash</span><span class="p">[</span><span class="nx">key</span><span class="p">];</span>
+
+        <span class="k">return</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+            <span class="k">try</span> <span class="p">{</span>
+                <span class="nx">Profiler</span><span class="p">.</span><span class="nx">enter</span><span class="p">(</span><span class="nx">name</span><span class="p">);</span>
+
+                <span class="kd">var</span> <span class="nx">ret</span> <span class="o">=</span> <span class="nx">fn</span><span class="p">.</span><span class="nx">apply</span><span class="p">(</span><span class="k">this</span><span class="p">,</span> <span class="nx">arguments</span><span class="p">);</span>
+            <span class="p">}</span> <span class="k">catch</span><span class="p">(</span><span class="nx">e</span><span class="p">)</span> <span class="p">{</span>
+                <span class="nx">Profiler</span><span class="p">.</span><span class="nx">exit</span><span class="p">();</span>
+
+                <span class="k">throw</span><span class="p">(</span><span class="nx">e</span><span class="p">);</span>
+            <span class="p">}</span>
+
+            <span class="nx">Profiler</span><span class="p">.</span><span class="nx">exit</span><span class="p">();</span>
+
+            <span class="k">return</span> <span class="nx">ret</span><span class="p">;</span>
+        <span class="p">}</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="nx">fn</span><span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">};</span>
+
+<span class="nx">module</span><span class="p">.</span><span class="nx">exports</span> <span class="o">=</span> <span class="nx">Profiler</span><span class="p">;</span>
+<span class="nx">module</span><span class="p">.</span><span class="nx">exports</span><span class="p">.</span><span class="nx">__f</span> <span class="o">=</span> <span class="nx">__f</span><span class="p">;</span>
+
+<span class="cm">/*</span>
+<span class="cm">USAGE:</span>
+<span class="cm">var X = {</span>
+
+<span class="cm">    callSomeAsync(param1, param2, __f(function() {</span>
+
+<span class="cm">//DIVIDER</span>
+<span class="cm">    }));</span>
+
+
+<span class="cm">    doSomething: function(x) {</span>
+<span class="cm">        __f(function() {</span>
+<span class="cm">            return 5 * x;</span>
+<span class="cm">        });</span>
+
+<span class="cm">        return x * x;</span>
+<span class="cm">    }</span>
+<span class="cm">}</span>
+<span class="cm">*/</span>
+
+</pre></div>             </td>           </tr>                               <tr id="section-6">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-6">&#182;</a>               </div>               <p>callback code</p>             </td>             <td class="code">               <div class="highlight"><pre>undefined</pre></div>             </td>           </tr>                </tbody>     </table>   </div> </body> </html> 

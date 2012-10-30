@@ -12,7 +12,7 @@ TODO: Significant work on the usage section needed, especially need help explain
 
 ## License (MIT)
 
-Copyright (C) 2012 by Uber Technologies, Inc.
+Copyright (C) 2010-2012 by Uber Technologies, Inc.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
