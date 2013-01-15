@@ -8,7 +8,7 @@
 		"Conrad Whelan <conrad.whelan@gmail.com>",
 		"David Ellis <d.f.ellis@ieee.org>"
 	],
-	"version": "0.1.3",
+	"version": "0.1.4",
 	"main": "./lib/clouseau",
 	"dependencies": {
 		"spruce": "1.0.2"
@@ -20,7 +20,7 @@
 		"node": "*"
 	},
 	"scripts": {
-		"prepublish": "npm test && docco ./lib/clouseau.js && git commit -am \"Automatic doc and minification for version $npm_package_version\" && git tag $npm_package_version && git push && git push --tags",
+		"realpublish": "npm test && docco ./lib/clouseau.js && git commit -am \"Automatic doc and minification for version $npm_package_version\" && git tag $npm_package_version && git push && git push --tags && npm publish",
 		"test": "node ./test/clouseau_test.js 10"
 	}
 }
