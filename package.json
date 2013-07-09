@@ -10,9 +10,6 @@
 	],
 	"version": "0.1.4",
 	"main": "./lib/clouseau",
-	"dependencies": {
-		"spruce": "1.0.2"
-	},
 	"devDependencies": {
 		"docco": "*"
 	},
