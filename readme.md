@@ -1,4 +1,4 @@
-# Clouseau
+# Clouseau [![NPM version](https://badge.fury.io/js/clouseau.png)](http://badge.fury.io/js/clouseau) [![Dependency Status](https://gemnasium.com/uber/clouseau.png)](https://gemnasium.com/uber/clouseau)
 
 A simple profiling object useful for determining source code performance in Javascript and Node.js
 
